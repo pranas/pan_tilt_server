@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="http://raw.github.com/ccampbell/mousetrap/master/mousetrap.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        var tilt = 0, pan = 0;
+
+        var socket = io.connect().of('/clients');
+        socket.on('msg', function (data) {
+            $('#message').html(data);
+        });
+        socket.on('start', function() {
+            $('#queue').remove()
+            $('#grid').show()
+            $('#message').html("It's your turn!");
+            adjust('tilt', 0);
+            adjust('pan', 0);
+        });
+        socket.on('disconnect', function () {
+            $('#message').html("You've been disconnected");
+            $('#position').remove()
+            $('#grid').remove()
+            Mousetrap.unbind('w')
+            Mousetrap.unbind('s')
+            Mousetrap.unbind('a')
+            Mousetrap.unbind('d')
+        });
+        socket.on('queue_status', function (number, total) {
+            $('#queue_status').html(number);
+            $('#queue_total').html(total);
+        });
+
+        function adjust(axis, value) {
+            this[axis] += value;
+            this[axis] = this[axis] < 0 ? 0 : this[axis];
+            this[axis] = this[axis] > 100 ? 100 : this[axis];
+            socket.emit(axis, this[axis]);
+            $('#position').html('Tilt: ' + tilt + ' Pan: ' + pan);
+
+            x = pan - 1;
+            y = tilt - 1;
+
+            $('#grid').html('<div style="position:absolute;left: '+ x +'px; top: '+ y +'px; width: 3px; height: 3px; background: red;"></div>')
+        }
+
+        Mousetrap.bind('w', function() { adjust('tilt', -1) });
+        Mousetrap.bind('s', function() { adjust('tilt', 1) });
+        Mousetrap.bind('a', function() { adjust('pan', -1) });
+        Mousetrap.bind('d', function() { adjust('pan', 1) });
+
+        $(document).ready(function() {
+            $('#grid').on('click', function(e) {
+                tilt = e.offsetY;
+                pan = e.offsetX;
+                adjust('tilt', 0);
+                adjust('pan', 0);
+            });
+        });
+    </script>
+    </head>
+<body>
+    <h1>Hello world</h1>
+    <p id="queue">You are <span id="queue_status">0</span> of <span id="queue_total">0</span></p>
+    <p id="message">It's just static index</p>
+    <p id="position"></p>
+    <div id="grid" style="width: 100px; height: 100px; border: 1px solid black; position: relative; display: none;">
+    </div>
+</body>
+</html>
+
+
